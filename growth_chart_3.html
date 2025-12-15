@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Évolution de Croissance - Juliette, Arthur, Coline</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+        .form-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .form-group button:hover {
+            background-color: #45a049;
+        }
+        .form-group button:active {
+            transform: scale(0.98);
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .data-table {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            max-height: 600px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .juliette { color: #FF6B9D; font-weight: bold; }
+        .arthur { color: #4169E1; font-weight: bold; }
+        .coline { color: #FF8C00; font-weight: bold; }
+        #chartCanvas {
+            max-height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📈 Évolution de Croissance des Enfants</h1>
+    
+    <div class="container">
+        <div class="chart-container">
+            <canvas id="chartCanvas"></canvas>
+        </div>
+        <div class="data-table">
+            <h3>Données Complètes</h3>
+            <table id="dataTable"></table>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h3>➕ Ajouter une nouvelle mesure</h3>
+        <form id="measurementForm" onsubmit="addMeasurement(event)">
+            <div class="form-group">
+                <div>
+                    <label for="child">Enfant</label>
+                    <select id="child" required>
+                        <option value="">-- Choisir --</option>
+                        <option value="Juliette">Juliette</option>
+                        <option value="Arthur">Arthur</option>
+                        <option value="Coline">Coline</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="measureDate">Date de mesure</label>
+                    <input type="date" id="measureDate" required>
+                </div>
+                <div>
+                    <label for="height">Taille (cm)</label>
+                    <input type="number" id="height" step="0.1" min="0" max="200" required>
+                </div>
+                <div>
+                    <label>&nbsp;</label>
+                    <button type="submit">Ajouter</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Données initiales des enfants
+        const initialGrowthData = {
+            "Juliette": {
+                birthDate: "25/01/2016",
+                measurements: [
+                    { date: "17/10/2020", height: 109.0 },
+                    { date: "29/09/2022", height: 116.5 },
+                    { date: "12/03/2023", height: 118.5 },
+                    { date: "16/12/2023", height: 123.0 },
+                    { date: "04/04/2024", height: 122.5 },
+                    { date: "21/10/2024", height: 125.0 },
+                    { date: "19/07/2025", height: 127.5 }
+                ]
+            },
+            "Arthur": {
+                birthDate: "16/01/2018",
+                measurements: [
+                    { date: "17/10/2020", height: 94.0 },
+                    { date: "01/07/2022", height: 106.0 },
+                    { date: "22/10/2022", height: 106.0 },
+                    { date: "03/09/2023", height: 114.5 },
+                    { date: "07/12/2025", height: 129.0 }
+                ]
+            },
+            "Coline": {
+                birthDate: "08/02/2020",
+                measurements: [
+                    { date: "22/10/2022", height: 96.5 },
+                    { date: "23/03/2023", height: 100.0 },
+                    { date: "03/09/2023", height: 105.0 },
+                    { date: "03/03/2024", height: 110.0 },
+                    { date: "11/06/2025", height: 118.0 },
+                    { date: "07/12/2025", height: 122.0 }
+                ]
+            }
+        };
+
+        // Charger les données depuis le localStorage
+        function loadData() {
+            const saved = localStorage.getItem('growthData');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return JSON.parse(JSON.stringify(initialGrowthData));
+        }
+
+        // Sauvegarder les données dans le localStorage
+        function saveData(data) {
+            localStorage.setItem('growthData', JSON.stringify(data));
+        }
+
+        let growthData = loadData();
+
+        // Calculer l'âge
+        function calculateAge(birthDate, measureDate) {
+            const birth = new Date(birthDate.split('/').reverse().join('-'));
+            const measure = new Date(measureDate.split('/').reverse().join('-'));
+            return ((measure - birth) / (365.25 * 24 * 60 * 60 * 1000)).toFixed(2);
+        }
+
+        // Fonction pour calculer la ligne de trend (régression linéaire)
+        function calculateTrendLine(data) {
+            if (data.length < 2) return null;
+            
+            const n = data.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            
+            data.forEach(point => {
+                sumX += point.x;
+                sumY += point.y;
+                sumXY += point.x * point.y;
+                sumX2 += point.x * point.x;
+            });
+            
+            const denominator = n * sumX2 - sumX * sumX;
+            if (denominator === 0) return null;
+            
+            const slope = (n * sumXY - sumX * sumY) / denominator;
+            const intercept = (sumY - slope * sumX) / n;
+            
+            return { slope, intercept };
+        }
+
+        // Préparer les données pour le chart
+        const chartColors = {
+            "Juliette": "rgba(255, 107, 157, 1)",
+            "Arthur": "rgba(65, 105, 225, 1)",
+            "Coline": "rgba(255, 140, 0, 1)"
+        };
+
+        const chartBackgroundColors = {
+            "Juliette": "rgba(255, 107, 157, 0.1)",
+            "Arthur": "rgba(65, 105, 225, 0.1)",
+            "Coline": "rgba(255, 140, 0, 0.1)"
+        };
+
+        let chart = null;
+
+        function updateChart() {
+            let datasets = [];
+
+            Object.keys(growthData).forEach(childName => {
+                const child = growthData[childName];
+                let ages = [];
+                let heights = [];
+                
+                child.measurements.forEach(m => {
+                    const age = parseFloat(calculateAge(child.birthDate, m.date));
+                    ages.push(age);
+                    heights.push(m.height);
+                });
+
+                const dataPoints = ages.map((age, i) => ({ x: age, y: heights[i] }));
+                
+                // Ajouter les points de données réels
+                datasets.push({
+                    label: childName,
+                    data: dataPoints,
+                    borderColor: chartColors[childName],
+                    backgroundColor: chartBackgroundColors[childName],
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    borderWidth: 2,
+                    showLine: false
+                });
+
+                // Calculer et ajouter la ligne de trend
+                const trendLine = calculateTrendLine(dataPoints);
+                if (trendLine && ages.length > 1) {
+                    const minAge = Math.min(...ages);
+                    const maxAge = Math.max(...ages);
+                    
+                    const trendPoints = [
+                        { x: minAge, y: trendLine.slope * minAge + trendLine.intercept },
+                        { x: maxAge, y: trendLine.slope * maxAge + trendLine.intercept }
+                    ];
+                    
+                    datasets.push({
+                        label: childName + ' (Trend)',
+                        data: trendPoints,
+                        borderColor: chartColors[childName],
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0,
+                        showLine: true,
+                        tension: 0
+                    });
+                }
+            });
+
+            // Détruire l'ancien chart s'il existe
+            if (chart) {
+                chart.destroy();
+            }
+
+            // Créer le nouveau chart
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'scatter',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Taille (cm) en fonction de l\'âge (années)',
+                            font: { size: 14 }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Âge (années)' },
+                            min: 2,
+                            max: 9
+                        },
+                        y: {
+                            title: { display: true, text: 'Taille (cm)' },
+                            min: 85,
+                            max: 135
+                        }
+                    }
+                }
+            });
+
+            updateTable();
+        }
+
+        function updateTable() {
+            const tableBody = document.getElementById('dataTable');
+            tableBody.innerHTML = '';
+            
+            Object.keys(growthData).forEach(childName => {
+                const className = childName.toLowerCase();
+                const child = growthData[childName];
+                child.measurements.forEach(m => {
+                    const age = calculateAge(child.birthDate, m.date);
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td class="${className}">${childName}</td>
+                            <td>${m.date}</td>
+                            <td>${age} ans</td>
+                            <td>${m.height} cm</td>
+                        </tr>
+                    `;
+                });
+            });
+        }
+
+        function addMeasurement(event) {
+            event.preventDefault();
+            
+            const child = document.getElementById('child').value;
+            const measureDate = document.getElementById('measureDate').value;
+            const height = parseFloat(document.getElementById('height').value);
+
+            if (!child || !measureDate || !height) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+
+            // Convertir la date de format YYYY-MM-DD en DD/MM/YYYY
+            const [year, month, day] = measureDate.split('-');
+            const formattedDate = `${day}/${month}/${year}`;
+
+            // Ajouter la nouvelle mesure
+            growthData[child].measurements.push({
+                date: formattedDate,
+                height: height
+            });
+
+            // Trier les mesures par date
+            growthData[child].measurements.sort((a, b) => {
+                return new Date(a.date.split('/').reverse().join('-')) - 
+                       new Date(b.date.split('/').reverse().join('-'));
+            });
+
+            // Sauvegarder les données
+            saveData(growthData);
+
+            // Réinitialiser le formulaire
+            document.getElementById('measurementForm').reset();
+
+            // Mettre à jour le chart
+            updateChart();
+
+            alert(`✅ Mesure ajoutée pour ${child}`);
+        }
+
+        // Initialiser le chart au chargement
+        updateChart();
+    </script>
+</body>
+</html>
